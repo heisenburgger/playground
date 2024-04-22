@@ -2,25 +2,16 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
+	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
-
-	"github.com/creack/pty"
-	"github.com/gorilla/websocket"
 )
 
 const BASE_DIR = "/home/kb/repos/kicks-react-template/"
-
-type DirEntry struct {
-	Type string `json:"type"`
-	Name string `json:"name"`
-}
 
 func readPTY(conn *websocket.Conn, tty *os.File) {
 	buf := make([]byte, 1024)
@@ -31,34 +22,32 @@ func readPTY(conn *websocket.Conn, tty *os.File) {
 			return
 		}
 		if n > 0 {
-			msg := struct {
-				Name string `json:"name"`
-				Data string `json:"data"`
-			}{
-				Name: "TERMINAL_OUTPUT",
+			event := TerminalOutputEvent{
+				Event: Event{
+					Name: "TERMINAL_OUTPUT",
+				},
 				Data: string(buf[:n]),
 			}
-			data, err := json.Marshal(msg)
+			msg, err := json.Marshal(event)
 			if err != nil {
-				log.Println("error: marshalling TERMINAL_OUTPUT msg:", err)
+				log.Println("error: marshalling TERMINAL_OUTPUT event:", err)
 				return
 			}
-			conn.WriteMessage(websocket.TextMessage, data)
+			conn.WriteMessage(websocket.TextMessage, msg)
 		}
 	}
 }
 
 func readConn(conn *websocket.Conn, tty *os.File) {
 	for {
-		_, data, err := conn.ReadMessage()
+		_, msg, err := conn.ReadMessage()
 		if err != nil {
 			log.Println("error: reading socket message:", err)
 			return
 		}
 
 		var event map[string]string
-
-		err = json.Unmarshal(data, &event)
+		err = json.Unmarshal(msg, &event)
 		if err != nil {
 			log.Println("error: parsing socket message as json:", err)
 			return
@@ -75,15 +64,14 @@ func readConn(conn *websocket.Conn, tty *os.File) {
 			}
 			path, _ := filepath.Abs(fullPath)
 
-			dirListingsMsg := struct {
-				Name  string      `json:"name"`
-				Files []*DirEntry `json:"files"`
-				Path  string      `json:"path"`
-			}{
-				Name:  "DIR_LISTINGS",
+			dirListingsEvent := DirListingsEvent{
+				Event: Event{
+					Name: "DIR_LISTINGS",
+				},
 				Path:  event["path"],
 				Files: make([]*DirEntry, 0),
 			}
+
 			for _, entry := range entries {
 				d := DirEntry{
 					Name: strings.Replace(filepath.Join(path, entry.Name()), BASE_DIR, "", 1),
@@ -92,12 +80,12 @@ func readConn(conn *websocket.Conn, tty *os.File) {
 				if entry.IsDir() {
 					d.Type = "dir"
 				}
-				dirListingsMsg.Files = append(dirListingsMsg.Files, &d)
+				dirListingsEvent.Files = append(dirListingsEvent.Files, &d)
 			}
 
-			msg, err := json.Marshal(dirListingsMsg)
+			msg, err := json.Marshal(dirListingsEvent)
 			if err != nil {
-				log.Println("error: marshalling files:", err)
+				log.Println("error: marshalling DIR_LISTINGS msg:", err)
 				return
 			}
 
@@ -109,20 +97,21 @@ func readConn(conn *websocket.Conn, tty *os.File) {
 				log.Println("error: reading file:", err)
 				return
 			}
-			fileContentMsg := struct {
-				Name     string `json:"name"`
-				Content  string `json:"content"`
-				Filename string `json:"filename"`
-			}{
-				Name:     "FILE_CONTENT",
+
+			fileContentEvent := FileContentEvent{
+				Event: Event{
+					Name: "FILE_CONTENT",
+				},
 				Content:  string(data),
 				Filename: filename,
 			}
-			msg, err := json.Marshal(fileContentMsg)
+
+			msg, err := json.Marshal(fileContentEvent)
 			if err != nil {
 				log.Println("error: marshalling FILE_CONTENT msg:", err)
 				return
 			}
+
 			conn.WriteMessage(websocket.TextMessage, msg)
 		case "TERMINAL_INPUT":
 			_, err := tty.Write([]byte(event["data"]))
@@ -134,30 +123,10 @@ func readConn(conn *websocket.Conn, tty *os.File) {
 }
 
 func main() {
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		upgrader := websocket.Upgrader{
-			CheckOrigin: func(r *http.Request) bool {
-				return true
-			},
-		}
-		conn, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			log.Println("error: upgrading socket connection:", err)
-			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(`{"error": "failed to upgrade to ws connection"}`))
-			return
-		}
-		cmd := exec.Command("/bin/bash")
-		tty, err := pty.Start(cmd)
-		if err != nil {
-			log.Println("error: creating tty:", err)
-			return
-		}
-		go readConn(conn, tty)
-		go readPTY(conn, tty)
-	})
+	mux := http.NewServeMux()
+	mux.HandleFunc("/ws", WSHandler)
 
 	// TODO: configure this port
-	fmt.Println("debug: ws server listening on port 8080")
-	http.ListenAndServe(":8080", nil)
+	log.Println("debug: ws server listening on port 8080")
+	log.Fatal(http.ListenAndServe(":8080", mux))
 }
