@@ -23,6 +23,9 @@ accessing a workspace:
   - a place to view output if possible
 
 - files/directories and file contents should be lazily loaded on demand
+  - [ ] when the workspace is requested, get the root files
+  - [ ] when the user clicks a file -> show content
+  - [ ] when the user clicks a folder -> get the files
 
 - as the user edits the file, send the changes
   - update in the storage allocated to the user 
@@ -30,3 +33,7 @@ accessing a workspace:
 
 - expose the shell to the frontend
   how? -> xterm.js
+
+- creating new files and folders
+- installing dependencies
+- vim mode

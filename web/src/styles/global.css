@@ -7,7 +7,8 @@
 
 :root {
   --bg: 14 21 37;
-  --fg: 249	245	252;
+  --fg: 249 245	252;
+  --muted: 157 162 166;
   --bg2: 28 35 51;
 }
 
@@ -40,4 +41,14 @@ input:focus, button:focus {
 .monaco-editor, 
 .overflow-guard { 
   border-radius: 10px; 
+}
+
+.xterm {
+  height: 100%;
+  width: 100%;
+  padding: 1rem;
+}
+
+.xterm-viewport {
+  border-radius: 10px;
 }
