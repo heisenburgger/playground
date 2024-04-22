@@ -1,0 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: 14 21 37;
+  --fg: 249	245	252;
+  --bg2: 28 35 51;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body: {
+  overflow: hidden;
+}
+
+/* TODO: remove this */
+.scroller::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+}
+
+.scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroller::-webkit-scrollbar-thumb {
+  background: theme(colors.gray.300);
+}
+
+input:focus, button:focus {
+  outline: none;
+}
+
+.monaco-editor, 
+.overflow-guard { 
+  border-radius: 10px; 
+}
