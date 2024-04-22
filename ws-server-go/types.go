@@ -2,7 +2,7 @@ package main
 
 type DirEntry struct {
 	Name string `json:"name"`
-	Type string `json:"dir"`
+	Type string `json:"type"`
 }
 
 type Event struct {
@@ -11,7 +11,7 @@ type Event struct {
 
 type TerminalOutputEvent struct {
 	Event
-	Data string `json:"string"`
+	Data string `json:"data"`
 }
 
 type DirListingsEvent struct {
