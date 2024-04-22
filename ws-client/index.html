@@ -1,0 +1,42 @@
+<html>
+  <head>
+    <script src="
+https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js
+"></script>
+<link href="
+https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css
+" rel="stylesheet">
+  </head>
+  <body>
+    <h1>XTerm Playground</h1>
+    <div id="terminal"></div>
+    <script>
+      const term = new Terminal();
+      term.open(document.getElementById('terminal'));
+      term.onData(data => {
+        socket.send(JSON.stringify({ type: 'TERM_INPUT', data }));
+      })
+
+      const socket = new WebSocket('ws://localhost:7000');
+      socket.addEventListener('open', function (event) {
+        console.log('WebSocket connected');
+      });
+      socket.addEventListener('message', function ({ data }) {
+        try {
+          const event = JSON.parse(data)
+          if(event.type === 'TERM_OUTPUT') {
+            term.write(event.data)
+          }
+        } catch(err) {
+          console.error("error: reading message:", err)
+        }
+      });
+      socket.addEventListener('error', function (event) {
+        console.error('WebSocket error:', event);
+      });
+      socket.addEventListener('close', function (event) {
+        console.log('WebSocket connection closed');
+      });
+    </script>
+  </body>
+</html>
